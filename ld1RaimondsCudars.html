@@ -1,0 +1,432 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width = device-width, initial-scale = 1.0">
+    <title>Kvadrāti pret Apļiem</title>
+    <style>
+        #rules {
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            font-size: 14px;
+        }
+
+        .restart {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        #symbolBoard {
+            display: none;
+            text-align: center;
+            justify-content: center;
+            margin: 20px;
+            font-size: 40px;
+        }
+
+        #top-center {
+            display: none;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .symbol {
+            display: inline-block;
+            font-size: 40px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <t1>Jūsu vārds:</t1>
+    <div id="output"></div>
+    <input type="text" id="inputName">
+    <button id="poga" onclick="saveName()">Saglabāt</button>
+    <button id="hStart" onclick="humanStart()">Nospied šo pogu, ja Tu vēlies sākt!</button>
+
+
+    <div id="top-center">
+        <t1>Pirmā simbola kārtas numurs</t1>
+        <input type="text" id="pirmaisNum">
+
+        <t1>Otrā simbola kārtas numurs</t1>
+        <input type="text" id="otraisNum">
+
+        <button id="goNum">Aiziet!</button>
+    </div>
+
+    <div id="symbolBoard"></div>
+
+    <script>
+        //varda ievade, lauku izvietošana
+        function saveName() {
+            //panem vertibu no text box
+            let vards = document.getElementById("inputName").value;
+            //neļauj turināt, kamēr nav ievadīts vārds
+            if (!vards) {
+                alert("Lūdzu ievadiet Jūsu vārdu!");
+                return;
+            }
+            //saglaba input localStorage
+            localStorage.setItem("savedName", vards);
+            //pec saglabasanas pasleepj text box
+            document.getElementById("inputName").style.display = "none";
+            //pec saglabasanas pasleepj pogu
+            document.getElementById("poga").style.display = "none";
+            //pec saglabasanas paraada gameBoard
+            document.getElementById("symbolBoard").style.display = "block";
+            //pec saglabasanas paraada ievades laukus
+            document.getElementById("top-center").style.display = "flex";
+            //pasleepj humanStart pogu
+            document.getElementById("hStart").style.display = "none";
+            displayInput();
+            createArr();
+        }
+        //atgriež saglabaato vaardu
+        function displayInput() {
+            let savedName = localStorage.getItem("savedName");
+            if (savedName) {
+                document.getElementById("output").textContent = savedName;
+            }
+        }
+
+        let hStart = false;
+        let humanTurn = false;
+
+        //ja true cilveks saak
+        function humanStart() {
+            const gr = document.getElementById("hStart");
+            gr.style.backgroundColor = "green";
+            hStart = true;
+            humanTurn = true;
+        }
+        //---------------------------------------------------------------------------------------------------------
+
+
+
+        let simMas = [];
+        //izveido masiivu random seciba
+        function createArr() {
+            const numSquares = 7;
+            const numCircles = 7;
+            //aizpilda masīvu
+            for (let i = 0; i < numSquares; i++) {
+                simMas.push('■');
+            }
+            for (let i = 0; i < numCircles; i++) {
+                simMas.push('○');
+            }
+            //samaisa masīvu random secībā
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            //izsauc maisiisanu
+            simMas = shuffle(simMas);
+
+            //izsauc izvietošanu
+
+            display(simMas);
+            //ja cilveks nesaak izsauc datora soli
+            if (!hStart) {
+                compMoves();
+            }
+        }
+
+        //parāda uz ekrāna simbolu virkni
+        function display(simMas) {
+            const symbolBoard = document.getElementById('symbolBoard');
+            symbolBoard.innerHTML = '';
+            for (let i = 0; i < simMas.length; i++) {
+                //izveido div
+                const simEl = document.createElement('div');
+                //panem indeksu
+                simEl.textContent = simMas[i];
+                //pievieno klasei
+                simEl.classList.add('symbol');
+                //pēc hover parāda indeksu +1
+                simEl.title = `${i + 1}`;
+                //pievieno kaa bernu symbolBoard
+                symbolBoard.appendChild(simEl);
+            }
+            //prbauda beigas
+            checkGameEnd(simMas);
+        }
+
+        //poga aiziet! darbiiba
+        const goNum = document.getElementById('goNum');
+        goNum.addEventListener('click', getInputs);
+        //pēc cilvēka ievades, panem indeksus un parāda cilvēka gājienu
+        function getInputs() {
+            //panem vertibas no input laukiem, peec pogas nospiesanas
+            const pirmaisNumInput = document.getElementById('pirmaisNum');
+            const otraisNumInput = document.getElementById('otraisNum');
+            let pirmaisNum = parseInt(pirmaisNumInput.value);
+            let otraisNum = parseInt(otraisNumInput.value);
+            //parbauda vai ir derigs inputs
+            if (isNaN(pirmaisNum) || isNaN(otraisNum)
+                || pirmaisNum < 1 || otraisNum < 1
+                || pirmaisNum > simMas.length
+                || otraisNum > simMas.length
+                || pirmaisNum > otraisNum
+                || pirmaisNum == otraisNum
+                || (otraisNum - pirmaisNum) != 1) {
+                alert('Lūdzu ievadiet derīgus simbolu kārtas numurus!!');
+                return;
+            }
+            //iztira laukus
+            pirmaisNumInput.value = '';
+            otraisNumInput.value = '';
+
+            let ievade = [pirmaisNum, otraisNum];
+
+            //parbauda vai ievaditie indeksi atbilst speles noteikumiem
+            const symbol1 = simMas[ievade[0] - 1];
+            const symbol2 = simMas[ievade[1] - 1];
+            if (symbol1 === '○' && symbol2 === '○') {
+                //aizvieto simMas masīva elementu ar indeksu pirmaisNum - 1, kā arī nākošo elementu ar []
+                simMas.splice(ievade[0] - 1, 2, '■');
+
+            } else if (symbol1 === '■' && symbol2 === '○') {
+                //aizvieto simMas masīva elementu ar indeksu pirmaisNum - 1, kā arī nākošo elementu ar O
+                simMas.splice(ievade[0] - 1, 2, '○');
+
+            } else if (symbol1 === '○' && symbol2 === '■') {
+                //aizvieto simMas masīva elementu ar indeksu pirmaisNum - 1, kā arī nākošo elementu ar O
+                simMas.splice(ievade[0] - 1, 2, '○');
+
+            } else {
+                //kludas kadījumā liek atkārtot ievadi
+                alert("Ievadītie numuri neatbilst spēles noteikumiem!");
+                return;
+            }
+            console.log('myMove' + simMas.length);
+            display(simMas);
+
+            //samaina mainiigo no cilveka uz datoru
+            humanTurn = !humanTurn;
+            if (!humanTurn) {
+                compMoves();
+            }
+        }
+
+        //meklē baigas
+        function checkGameEnd(simMas) {
+            //galvenais kriterijs 3 simboli masiva
+            if (simMas.length === 3) {
+                let endMSG = '';
+                if (simMas[0] === '○' && simMas[1] === '○') {
+                    if (hStart == true) {
+                        endMSG = `Dators ir Jūs pārspējis`;
+                    } else {
+                        endMSG = `Jūs uzvarējāt!`;
+                    }
+                } else if (simMas[0] === '■' && simMas[1] === '■') {
+                    if (hStart == true) {
+                        endMSG = `Jūs uzvarējāt! `;
+                    } else {
+                        endMSG = `Dators ir Jūs pārspējis`;
+                    }
+                } else {
+                    endMSG = 'Rezultāts ir neizšķirts!';
+                }
+                alert(endMSG);
+                //pasleepj ievades laukus pec beigam
+                document.getElementById("top-center").style.display = "none";
+            }
+        }
+
+        //gavena dala ar datora soliem, koka izveidosana un minimax algoritms
+        function compMoves() {
+            
+            //novēlo funkcijas zipildi par 1s
+            setTimeout(function () {
+                //pielidzina simMas => sobridSituacija masivas
+                const sobridSituacija = simMas;
+                //saak funkciju nakosasIespejas() pirmaja gajiena state = sobridSituacija
+                function nakosasIespejas(state) {
+                    const moves = [];
+                    //parbauda vei masiva garums nav vienads mazaks par 3
+                    // ja ir atgriez moves masivu
+                    if (state.length <= 3) {
+                        return moves;
+                    }
+                    //parbauda kadas blakus opcijas visas stadijas garumaa
+                    for (let i = 0; i <= state.length - 1; i++) {
+                        if (state[i] === '○' && state[i + 1] === '○') {
+                            //divus aplus aivieto ar kvadratu, newState tiek izveidots no 3 citiem masiviem 
+                            const newState = [...state.slice(0, i), '■', ...state.slice(i + 2)];
+                            moves.push(newState);
+                        } else if (state[i] === '■' && state[i + 1] === '○') {
+                            //kvadrats, aplis aizvietos ar aplis
+                            const newState = [...state.slice(0, i), '○', ...state.slice(i + 2)];                           
+                            moves.push(newState);
+                        } else if (state[i] === '○' && state[i + 1] === '■') {
+                            //aplis, kvadratss aizvietots ar apli
+                            const newState = [...state.slice(0, i), '○', ...state.slice(i + 2)];
+                            moves.push(newState);
+                        }
+                    }
+                    //atgriez izveiidotaas opcijas
+                    return moves;
+                }
+                //uztaisa speles koku vadoties peec dziluma
+                function genTree(state, dzilums) {
+                    //parbauda vai dziluma nosacījums izpildās
+                    if (dzilums === 0) {
+                        return { state, children: [] };
+                    }
+                    //izsauc nakosasIespejas() ar sobrideejo state, pieliidzina visas opcijas iespeas masivaa
+                    const iespeas = nakosasIespejas(state);
+                    //no iespeas masiiva katram elementam izveido iespejamas nakoso gajienu variacijas
+                    //izmantojot move => darbojas kā funkcija() katram iespeas elementam izveido nakosos variacijas solus
+                    const children = iespeas.map(move => genTree(move, dzilums - 1));
+                    //tiek atgriezts objekts ar sakuma state un visam nakosajam variacijam
+                    return { state, children };
+                }
+
+
+                //minimax() funkcija izmantojot minimaks algoritmu izverte labako nakoso soli
+                function minimax(koks, dzilums, maxPlayer) {
+                    //novertē vai ir sasniegts dzilums 0 un vai  objekta bernu garums ir 1
+                    //atgriez onjekta stadiju
+                    if (dzilums === 0 || koks.children.length === 1) {
+                        return koks.state;
+                    }
+                    //ja algoritms maximizee maxPlayer = true
+                    if (maxPlayer) {
+                        //maksimali mazaka vertiba
+                        let bestValue = -Infinity;
+                        let bestMove = null;
+                        //cikls iziet cauri katrai variaciju iespejai cauri visas tāss garumā
+                        for (let i = 0; i < koks.children.length; i++) {
+                            //izsauc minimax() funkciju atkartoti, jo nakošja limenī bus jāminimizē
+                            let value = minimax(koks.children[i], dzilums - 1, false);
+                            //iedod value novertejumu balstoties uz situāciju
+                            //datoram pateicīgās situācijas
+                            if ((hStart === true && koks.children[i].state.slice(0, 2) == ['○', '○'])
+                                || (hStart === false && koks.children[i].state.slice(0, 2) == ['■', '■'])) {
+                                value = +1;
+                                //datoram nepateicīgās situācijas
+                            } else if ((hStart === true && koks.children[i].state.slice(0, 2) == ['■', '■'])
+                                || (hStart === false && koks.children[i].state.slice(0, 2) == ['○', '○'])) {
+                                value = -1;
+                                //situācijas, kasnorāda uz neižšķirtu
+                            } else if (koks.children[i].state.slice(0, 2) == ['○', '■']
+                                || koks.children[i].state.slice(0, 2) == ['■', '○']) {
+                                value = 0;
+                            }
+                            //ja value ir labāka par iepriekšējo labāko vērtību
+                            if (value > bestValue) {
+                                //piešķir jaunu nākošo vērtību
+                                bestValue = value;
+                                //piešķir šobrīdējo nākošo labāko situāciju
+                                bestMove = koks.children[i].state;
+                            }
+                        }
+                        return bestMove;
+                        //ja minimizē
+                    } else {
+                        //maksimāli lielākā vērtība
+                        let bestValue = Infinity;
+                        let bestMove = null;
+                        //cikls iziet cauri katrai variaciju iespejai cauri visas tāss garumā
+                        for (let i = 0; i < koks.children.length; i++) {
+                             //izsauc minimax() funkciju atkartoti, jo nakošja limenī bus jāmaksimizē
+                            let value = minimax(koks.children[i], dzilums - 1, true);
+                            //iedod value novertejumu balstoties uz situāciju
+                            //datoram pateicīgās situācijas
+                            if ((hStart === true && koks.children[i].state.slice(0, 2) == ['○', '○'])
+                                || (hStart === false && koks.children[i].state.slice(0, 2) == ['■', '■'])) {
+                                value = +1;
+                                //datoram nepateicīgās situācijas
+                            } else if ((hStart === true && koks.children[i].state.slice(0, 2) == ['■', '■'])
+                                || (hStart === false && koks.children[i].state.slice(0, 2) == ['○', '○'])) {
+                                value = -1;
+                                //situācijas, kasnorāda uz neižšķirtu
+                            } else if (koks.children[i].state.slice(0, 2) == ['○', '■']
+                                || koks.children[i].state.slice(0, 2) == ['■', '○']) {
+                                value = 0;
+                            }
+                            //ja value ir mazāks par iepriekšējo sliktāko vērtību
+                            if (value < bestValue) {
+                                //pieskir jaunnu sliktāko vērtību
+                                bestValue = value;
+                                //pieskir jaunu situāciju kurā pretiniekam tiks veikts minimizācijas gājiens
+                                bestMove = koks.children[i].state;
+                            }
+                        }
+                        return bestMove;
+                    }
+                }
+                //kludas parbaude, kods nestrādā kā paredzēts, ja masīvs ir aizpildīts ar kvadrātiem un aplis ir pēdējais
+                //manuāli izpilda šo situāciju
+                if (sobridSituacija.slice(0, sobridSituacija.length - 1).every(element => element === '■')
+                    && sobridSituacija[sobridSituacija.length - 1] === '○'
+                    && sobridSituacija.length > 3) {
+                    const temp = sobridSituacija.slice(1);
+                    console.log('temp ');
+                    console.log(temp);
+                    simMas = temp;
+                    checkGameEnd(simMas);
+                    display(simMas);
+                    //ja sobridSituacija garus ir mazāks par 5 resursu taupīšanas nolūkos netiek rēķinātas vairāk situācijas
+                } else if (sobridSituacija.length <= 5) {
+                    //izmanto dzilumu 2
+                    //izsauc genTree funkciju
+                    const gameTree = genTree(sobridSituacija, 2);
+                    //izmantjot objektu gameTree izsauc minimax()
+                    const bestMove = minimax(gameTree, 2, true);
+                    console.log('smallDep ');
+                    console.log(bestMove);
+                    simMas = bestMove;
+                    checkGameEnd(simMas);
+                    display(simMas);
+                } else {
+                    //klasiskā situācija
+                    //izsauc genTree funkciju
+                    const gameTree = genTree(sobridSituacija, 4);
+                    //izmantjot objektu gameTree izsauc minimax()
+                    const bestMove = minimax(gameTree, 4, true);
+                    console.log('best ');
+                    console.log(bestMove);
+                    simMas = bestMove;
+                    checkGameEnd(simMas);
+                    display(simMas);
+                }
+
+
+
+            }, 1000);
+            humanTurn = !humanTurn;
+        }
+    </script>
+
+    <div id="rules">
+        <t1 style="font-size:17px;"><b>Noteikumi:</b></t1>
+        <p>Izvēlas kas sāks spēli: cilvēks vai dators.</p>
+        <p>Spēlētāji izpilda gājienus secīgi.</p>
+        <p>Gājiena laikā spēlētājs var aizvietot divus blakusstāvošus apļus ar kvadrātu vai</p>
+        <p>aizvietot kvadrātu un apli, kas stāv blakus, ar apli.</p>
+        <p>Spēle beidzas, kad virknē paliek 3 simboli.</p>
+        <p>Ja virknes pirmie divi simboli ir kvadrāti, tad uzvar spēlētājs, kurš uzsāka spēli.</p>
+        <p>Ja tie ir apļi, tad uzvar otrais spēlētājs.</p>
+        <p>Pretējā gadījumā rezultāts ir neizšķirts.</p>
+    </div>
+
+    <button class="restart" onclick="rest()">Sākt spēli no jauna!</button>
+    <script>
+        //atjaunno lapu un iztira localStorage
+        function rest() {
+            localStorage.clear();
+            location.reload();
+        }
+    </script>
+</body>
+</html>
